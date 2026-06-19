@@ -20,4 +20,5 @@ COPY . .
 
 EXPOSE 8501
 
+# streamlit run app.py using the server address -- 
 CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
