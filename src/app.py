@@ -7,31 +7,12 @@ import joblib
 from myfuncitons import *
 
 
-
 current_folder = Path(__file__).parent 
 model_location = current_folder/"classify.joblib"
 model = joblib.load(model_location)
 
-
-st.title("Drone State Classifier 📈📊")
-st.header("Drone Behavior Detector")
-
-
-uploaded_file = st.file_uploader("Upload an image", type=["csv", "xlsx"])
-
-if uploaded_file:
-    
-    try:
-        df = load_file(uploaded_file)
-        st.success("Data Successfully Loaded 😀")
-        st.write(df)     
-    except Exception as e:
-        print(f"Error: {e}")
-        
-
 # Make predictions
-selected_columns = [
-       'height_above_takeoff(feet)',
+selected_columns = ['latitude', 'longitude', 'height_above_takeoff(feet)',
        'height_above_ground_at_drone_location(feet)',
        'ground_elevation_at_drone_location(feet)',
        'altitude_above_seaLevel(feet)', 'height_sonar(feet)', 'speed(mph)',
@@ -43,19 +24,80 @@ selected_columns = [
        'rc_throttle', 'rc_rudder', 'rc_elevator(percent)',
        'rc_aileron(percent)', 'rc_throttle(percent)', 'rc_rudder(percent)',
        'gimbal_heading(degrees)', 'gimbal_pitch(degrees)',
-       'gimbal_roll(degrees)', 'battery_percent', 'voltageCell1',
-       'voltageCell2', 'voltageCell3', 'voltageCell4', 'voltageCell5',
-       'voltageCell6', 'current(A)', 'battery_temperature(f)',
-       'altitude(feet)', 'ascent(feet)', 'flycStateRaw', 'flycState']
-      
+       'gimbal_roll(degrees)', 'battery_percent', 'current(A)',
+       'battery_temperature(f)', 'altitude(feet)', 'ascent(feet)',
+       'flycStateRaw']
 
-if selected_columns in uploaded_file.columns:
-    st.write("Selected Columns Present in data")
-    st.success("Selected Columns Present in data")
-else:
-    st.write("Selected Columns Not Present in data")
-    st.error("Selected Columns Not Present in data")
+st.set_page_config(page_title=None, 
+                   page_icon=None, 
+                   layout=None, 
+                   initial_sidebar_state=None, 
+                   menu_items=None)
+
+
+st.title("Drone State Classifier 📈📊")
+st.write("Simple streamlit app to upload and deploy datat for model ")
+# st.header("Drone Behavior Detector")
+
+
+uploaded_file = st.file_uploader("Upload an file", type=["csv", "xlsx"])
+
+if uploaded_file:
+
+    df = load_file(uploaded_file)
+    st.dataframe(df.head())
     
-cleaned_data = uploaded_file[selected_columns]
-y_pred = model.predict(cleaned_data)
+    if "latitude" in df.columns and "longitude" in df.columns:
 
+        map_df = df[["latitude", "longitude"]].copy()
+
+        map_df["latitude"] = pd.to_numeric(map_df["latitude"], errors="coerce")
+        map_df["longitude"] = pd.to_numeric(map_df["longitude"], errors="coerce")
+
+        map_df = map_df.dropna()
+
+        st.subheader("Drone Flight Map")
+        st.map(map_df)
+
+    else:
+        st.warning("Latitude and longitude columns are missing.")
+
+    # df.columns = df.columns.str.strip()
+
+    missing_cols = [
+        col for col in selected_columns
+        if col not in df.columns
+    ]
+
+    if missing_cols:
+        st.error(f"Missing columns: {missing_cols}")
+
+    else:
+
+        st.success("All model features found")
+
+        cleaned_data = df[selected_columns]
+
+        if st.button("Run Model"):
+
+            with st.spinner("Running predictions..."):
+
+                y_predict = model.predict(cleaned_data)
+
+                pred_df = df.copy()
+                pred_df["Predicted_State"] = y_predict
+
+                st.dataframe(
+                    pred_df[
+                        ["Predicted_State"]
+                    ].head()
+                )
+
+                csv = pred_df.to_csv(index=False)
+
+                st.download_button(
+                    label="Download Predictions",
+                    data=csv,
+                    file_name="drone_predictions.csv",
+                    mime="text/csv"
+                )
