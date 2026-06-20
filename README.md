@@ -1,6 +1,4 @@
-# prod_ML
+# Prod_ML
 
-# docker build procedure
-
-1. docker build -t my-name .
-2. docker run -p
+1-docker build -t flight-classifier.
+2-docker run -p 8501:8501 flight-classifier
